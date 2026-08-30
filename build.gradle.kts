@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "io.github.kitleong1981"
-version = "0.1.0"
+version = "0.1.1"
 
 android {
     namespace = "io.github.kitleong1981.crawl4android"

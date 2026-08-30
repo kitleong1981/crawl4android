@@ -41,7 +41,7 @@ Then add the dependency:
 
 ```kotlin
 dependencies {
-    implementation("io.github.kitleong1981:crawl4android:0.1.0")
+    implementation("io.github.kitleong1981:crawl4android:0.1.1")
 }
 ```
 
@@ -49,12 +49,12 @@ Gradle composite-build dependency substitution uses the local checkout.
 
 ### Release AAR
 
-Download `crawl4android-0.1.0.aar` from the GitHub release, place it in the
+Download `crawl4android-0.1.1.aar` from the GitHub release, place it in the
 host's `app/libs/`, and add:
 
 ```kotlin
 dependencies {
-    implementation(files("libs/crawl4android-0.1.0.aar"))
+    implementation(files("libs/crawl4android-0.1.1.aar"))
     implementation("org.jsoup:jsoup:1.23.2")
 }
 ```
