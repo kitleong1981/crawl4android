@@ -10,7 +10,8 @@ class Crawl4Android(
     private val searchProvider: SearchProvider = FallbackSearchProvider(
         listOf(
             DuckDuckGoLiteSearchProvider(config),
-            MojeekSearchProvider(config)
+            MojeekSearchProvider(config),
+            BingSearchProvider(config)
         )
     )
 ) {
