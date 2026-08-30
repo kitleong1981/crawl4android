@@ -7,7 +7,12 @@ package io.github.kitleong1981.crawl4android
  */
 class Crawl4Android(
     private val config: CrawlConfig = CrawlConfig(),
-    private val searchProvider: SearchProvider = DuckDuckGoLiteSearchProvider(config)
+    private val searchProvider: SearchProvider = FallbackSearchProvider(
+        listOf(
+            DuckDuckGoLiteSearchProvider(config),
+            MojeekSearchProvider(config)
+        )
+    )
 ) {
     private val client = SafeHttpClient(config)
     private val extractor = PageContentExtractor(config.chunkTargetChars)

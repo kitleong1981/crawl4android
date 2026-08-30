@@ -13,7 +13,7 @@ Chromium, Playwright, an LLM, or UI components.
 
 ## Pipeline
 
-1. A `SearchProvider` finds candidate pages. The default provider parses DuckDuckGo Lite.
+1. A `SearchProvider` finds candidate pages. The default tries DuckDuckGo Lite, then falls back to Mojeek when DuckDuckGo returns a verification challenge or no usable results.
 2. A guarded HTTP client downloads a bounded number of public HTTP(S) pages.
 3. Static HTML chrome is removed and readable blocks are packed into chunks.
 4. BM25 ranks chunks using word tokens and CJK bigrams.
@@ -110,12 +110,14 @@ val crawler = Crawl4Android(searchProvider = provider)
 - `CrawlProgress`
 - `SearchProvider`
 - `SearchResult`
+- `FallbackSearchProvider`
 - `DuckDuckGoLiteSearchProvider`
+- `MojeekSearchProvider`
 - `CrawlException`
 
 ## Limits
 
-- DuckDuckGo Lite is an unofficial HTML integration and can change or request verification.
+- DuckDuckGo Lite and Mojeek are unofficial HTML integrations and can change or request verification. The fallback does not attempt to bypass challenges.
 - JavaScript-rendered pages are not rendered; static HTML and plain text are supported.
 - Search calls can be rate-limited. Host applications should avoid aggressive automation.
 - URL safety checks are defense in depth, not a complete network sandbox.
