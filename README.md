@@ -13,7 +13,7 @@ Chromium, Playwright, an LLM, or UI components.
 
 ## Pipeline
 
-1. A `SearchProvider` finds candidate pages. The default tries DuckDuckGo Lite, Mojeek, and Bing in order when an earlier provider returns a verification challenge or no usable results.
+1. A `SearchProvider` finds candidate pages. The default tries DuckDuckGo Lite, Mojeek, Yahoo, and Bing in order when an earlier provider returns a verification challenge or no usable results.
 2. A guarded HTTP client downloads a bounded number of public HTTP(S) pages.
 3. Static HTML chrome is removed and readable blocks are packed into chunks.
 4. BM25 ranks chunks using word tokens and CJK bigrams.
@@ -41,7 +41,7 @@ Then add the dependency:
 
 ```kotlin
 dependencies {
-    implementation("io.github.kitleong1981:crawl4android:0.1.1")
+    implementation("io.github.kitleong1981:crawl4android:0.2.0")
 }
 ```
 
@@ -49,12 +49,12 @@ Gradle composite-build dependency substitution uses the local checkout.
 
 ### Release AAR
 
-Download `crawl4android-0.1.1.aar` from the GitHub release, place it in the
+Download `crawl4android-0.2.0.aar` from the GitHub release, place it in the
 host's `app/libs/`, and add:
 
 ```kotlin
 dependencies {
-    implementation(files("libs/crawl4android-0.1.1.aar"))
+    implementation(files("libs/crawl4android-0.2.0.aar"))
     implementation("org.jsoup:jsoup:1.23.2")
 }
 ```
@@ -89,6 +89,25 @@ available even when a small model fails to reproduce citation formatting.
 Calls are blocking by design to avoid imposing a coroutine dependency. Invoke
 `research` from an I/O dispatcher or background executor.
 
+### Multiple search queries
+
+Hosts can use deterministic rules or a small local model to rewrite a broad
+question into up to three focused search-engine queries while keeping the
+original question for ranking and answer context:
+
+```kotlin
+val report = crawler.research(
+    query = userQuestion,
+    searchQueries = listOf(
+        "open-weight LLM releases July August 2026",
+        "site:huggingface.co/blog model release August 2026"
+    )
+)
+```
+
+Results are merged round-robin and deduplicated by URL. The original
+single-query `research(query)` API remains available.
+
 ## Custom Search Provider
 
 ```kotlin
@@ -113,14 +132,18 @@ val crawler = Crawl4Android(searchProvider = provider)
 - `FallbackSearchProvider`
 - `DuckDuckGoLiteSearchProvider`
 - `MojeekSearchProvider`
+- `YahooSearchProvider`
 - `BingSearchProvider`
 - `CrawlException`
 
 ## Limits
 
-- DuckDuckGo Lite, Mojeek, and Bing are unofficial HTML integrations and can change or request verification. The fallback does not attempt to bypass challenges.
+- DuckDuckGo Lite, Mojeek, Yahoo, and Bing are unofficial HTML integrations and can change or request verification. The fallback does not attempt to bypass challenges.
 - JavaScript-rendered pages are not rendered; static HTML and plain text are supported.
 - Search calls can be rate-limited. Host applications should avoid aggressive automation.
+- The default fallback rejects result sets with insufficient query-term overlap,
+  and final BM25 selection rejects zero-score chunks instead of supplying
+  unrelated pages to the host model.
 - URL safety checks are defense in depth, not a complete network sandbox.
 - Web content is untrusted. Prompt delimiters cannot guarantee resistance to prompt injection.
 - Hosts are responsible for applicable robots policies, terms, copyright, privacy, and request limits.

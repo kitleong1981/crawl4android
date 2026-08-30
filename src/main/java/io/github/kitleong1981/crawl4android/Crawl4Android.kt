@@ -11,8 +11,10 @@ class Crawl4Android(
         listOf(
             DuckDuckGoLiteSearchProvider(config),
             MojeekSearchProvider(config),
+            YahooSearchProvider(config),
             BingSearchProvider(config)
-        )
+        ),
+        SearchResultRelevance::filterRelevantResults
     )
 ) {
     private val client = SafeHttpClient(config)
@@ -22,13 +24,38 @@ class Crawl4Android(
     fun research(
         query: String,
         onProgress: (CrawlProgress) -> Unit = {}
+    ): CrawlReport = research(query, listOf(query), onProgress)
+
+    /** Runs research with multiple search-engine queries while answering the original [query]. */
+    fun research(
+        query: String,
+        searchQueries: List<String>,
+        onProgress: (CrawlProgress) -> Unit = {}
     ): CrawlReport {
         val normalizedQuery = query.trim()
         if (normalizedQuery.isEmpty()) throw CrawlException("Enter a question before searching the web.")
 
+        val normalizedSearchQueries = searchQueries.asSequence()
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+            .distinctBy(String::lowercase)
+            .take(MAX_SEARCH_QUERIES)
+            .toList()
+            .ifEmpty { listOf(normalizedQuery) }
+
         onProgress(CrawlProgress.Searching)
-        val searchResults = searchProvider.search(normalizedQuery, config.maxSearchResults)
         val warnings = mutableListOf<String>()
+        val resultSets = normalizedSearchQueries.mapNotNull { searchQuery ->
+            runCatching {
+                searchProvider.search(searchQuery, config.maxSearchResults)
+            }.onFailure { error ->
+                warnings += "$searchQuery: ${error.message ?: "search failed"}"
+            }.getOrNull()
+        }
+        val searchResults = mergeSearchResults(resultSets, config.maxSearchResults)
+        if (searchResults.isEmpty()) {
+            throw CrawlException("No sufficiently relevant web search results were found.")
+        }
         val chunks = mutableListOf<ContentChunk>()
         var crawledPages = 0
 
@@ -58,7 +85,11 @@ class Crawl4Android(
         }
 
         onProgress(CrawlProgress.Ranking)
-        val selected = selectChunks(Bm25Ranker.rank(normalizedQuery, chunks))
+        val rankingQuery = (listOf(normalizedQuery) + normalizedSearchQueries).joinToString(" ")
+        val selected = selectChunks(Bm25Ranker.rank(rankingQuery, chunks).filter { it.score > 0.0 })
+        if (selected.isEmpty()) {
+            throw CrawlException("Web search results were not relevant enough to answer this question.")
+        }
         val sources = selected.groupBy { it.chunk.source.url }
             .values
             .map { sourceChunks ->
@@ -74,6 +105,20 @@ class Crawl4Android(
             crawledPageCount = crawledPages,
             warnings = warnings
         )
+    }
+
+    private fun mergeSearchResults(resultSets: List<List<SearchResult>>, limit: Int): List<SearchResult> {
+        val merged = mutableListOf<SearchResult>()
+        val seenUrls = mutableSetOf<String>()
+        var index = 0
+        while (merged.size < limit && resultSets.any { index < it.size }) {
+            resultSets.forEach { results ->
+                val result = results.getOrNull(index) ?: return@forEach
+                if (seenUrls.add(result.url)) merged += result
+            }
+            index++
+        }
+        return merged.take(limit)
     }
 
     private fun selectChunks(ranked: List<RankedChunk>): List<RankedChunk> {
@@ -128,6 +173,7 @@ class Crawl4Android(
 
     companion object {
         private const val MAX_EXCERPTS_PER_SOURCE = 2
+        private const val MAX_SEARCH_QUERIES = 3
         private const val CONTEXT_WRAPPER_RESERVE = 700
     }
 }
