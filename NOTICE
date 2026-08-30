@@ -1,0 +1,9 @@
+Crawl4Android
+Copyright 2026 kitleong1981
+
+The project was inspired by Crawl4AI's documented extraction architecture,
+including content pruning, chunking, BM25 filtering, and cited output. It is an
+original Kotlin implementation and does not include Crawl4AI source code,
+Python, Playwright, or Chromium.
+
+Crawl4AI: https://github.com/unclecode/crawl4ai
